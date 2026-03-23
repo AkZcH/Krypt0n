@@ -103,10 +103,14 @@ fn default_encrypt_output(input: &Path) -> PathBuf {
 fn default_decrypt_output(input: &Path) -> PathBuf {
     let mut output = input.to_path_buf();
 
-    if let Some(ext) = output.extension() {
-        if ext == "kry" {
-            output.set_extension("");
-        }
+    // if let Some(ext) = output.extension() {
+    //     if ext == "kry" {
+    //         output.set_extension("");
+    //     }
+    // }3f43t3443
+
+    if let Some(ext) = output.extension() && ext == "kry" {
+        output.set_extension("");
     }
 
     output
