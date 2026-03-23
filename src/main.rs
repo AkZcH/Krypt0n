@@ -109,7 +109,9 @@ fn default_decrypt_output(input: &Path) -> PathBuf {
     //     }
     // }3f43t3443
 
-    if let Some(ext) = output.extension() && ext == "kry" {
+    if let Some(ext) = output.extension()
+        && ext == "kry"
+    {
         output.set_extension("");
     }
 
