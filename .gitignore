@@ -1,0 +1,10 @@
+/target
+
+# local test artifacts
+*.kry
+big.bin
+message.txt
+test.txt
+secrets.txt
+recovered.txt
+secret.kry
