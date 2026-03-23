@@ -1,374 +1,269 @@
-Blunt truth first: **projects don’t get 100k+ stars because they’re “well-built.”**
-They get stars because they are **useful, trusted, simple, and adopted by other tools**.
+# Krypton 🔐
 
-Right now, Krypton is a **strong engineering project**. To reach “age / ripgrep / bat / fd / zoxide tier,” it must become a **tool people depend on daily**.
+![CI](https://github.com/<your-username>/krypton/actions/workflows/ci.yml/badge.svg)
+![License](https://img.shields.io/github/license/<your-username>/krypton)
+![Rust](https://img.shields.io/badge/rust-stable-orange)
+![Docker](https://img.shields.io/badge/container-ready-blue)
 
-Here’s the exact path.
+**Krypton** is a modern password-based encryption toolkit written in Rust that implements **Argon2id key derivation** and **XChaCha20-Poly1305 authenticated encryption** with a versioned binary envelope format and streaming file support.
 
----
-
-# Step 1 — Pick Krypton’s identity (this decides everything)
-
-A project with 100k+ stars is **one sentence simple**.
-
-Choose one:
-
-### Option A (best chance)
-
-**Modern replacement for GPG for developers**
-
-Example positioning:
-
-> Encrypt files safely with passwords using modern crypto defaults.
-
-Why this works:
-
-- massive audience
-- real pain point
-- simple mental model
+It is designed as a secure, reproducible, container-ready encryption engine suitable for CLI workflows, scripting environments, and infrastructure pipelines.
 
 ---
 
-### Option B
+# Features
 
-**Rust-native encryption toolkit like libsodium-lite CLI**
-
-Harder to market.
-
----
-
-### Option C
-
-**Encryption engine for pipelines / DevOps secrets**
-
-Very strong niche:
-
-- GitHub Actions
-- Kubernetes secrets
-- CI workflows
-
-Less viral, more professional adoption.
-
-**Recommendation: combine A + C**
+- Argon2id password-based key derivation
+- XChaCha20-Poly1305 authenticated encryption (AEAD)
+- Versioned encryption envelope format
+- Streaming encryption (multi-GB safe)
+- Tamper detection via authentication tags
+- CLI interface for file encryption
+- Docker container runtime support
+- Non-root container execution
+- Strict Clippy + Rustfmt enforcement
+- GitHub Actions CI pipeline
+- Environment-variable password support for automation
 
 ---
 
-# Step 2 — Match what successful security tools actually do
+# Quick Start
 
-Look at what tools like **age** did right:
+Build locally:
 
-They:
+```bash
+cargo build --release
+```
 
-✔ had zero-config safe defaults
-✔ avoided legacy crypto
-✔ shipped single binary
-✔ worked everywhere
-✔ documented security model clearly
-✔ integrated with pipelines
+Encrypt a file:
 
-Not just “implemented encryption.”
+```bash
+cargo run -- encrypt secrets.txt --password hunter2
+```
+
+Decrypt a file:
+
+```bash
+cargo run -- decrypt secrets.txt.kry --password hunter2
+```
 
 ---
 
-# Step 3 — Krypton must become safer than competitors by default
+# CLI Usage
 
-Right now Krypton is good.
+Encrypt:
 
-To become exceptional:
-
-Add:
-
-### Required upgrades
-
-#### 1️⃣ key-based mode (not password-only)
-
-Support:
-
-```
-krypton encrypt --key keyfile
+```bash
+krypton encrypt secrets.txt --password hunter2
 ```
 
-This moves Krypton into professional territory.
+Decrypt:
+
+```bash
+krypton decrypt secrets.txt.kry --password hunter2
+```
+
+Environment-variable password support:
+
+```bash
+KRYP_PASS=hunter2 krypton encrypt secrets.txt --password-env KRYP_PASS
+```
+
+Output files are generated automatically:
+
+```
+secrets.txt → secrets.txt.kry
+secrets.txt.kry → secrets.txt
+```
 
 ---
 
-#### 2️⃣ streaming encryption
+# Streaming Encryption Support
 
-Support:
+Krypton supports chunk-authenticated streaming encryption.
 
-```
-cat bigfile | krypton encrypt > bigfile.kry
-```
+This enables:
 
-Without streaming:
-large-file users won’t adopt it.
+- encryption of multi-GB files
+- constant memory usage
+- pipeline compatibility
+- container-safe execution
 
----
-
-#### 3️⃣ armored output
-
-Support:
-
-```
---armor
-```
-
-Output:
-
-```
------BEGIN KRYPTON-----
-BASE64 DATA
------END KRYPTON-----
-```
-
-Now usable in emails, configs, YAML.
+Each chunk is independently authenticated using AEAD.
 
 ---
 
-#### 4️⃣ automatic secure defaults
+# Docker Usage
 
-No flags required:
+Build container:
 
+```bash
+docker build -t krypton .
 ```
-krypton encrypt secrets.env
+
+Encrypt:
+
+```bash
+docker run -v ${PWD}:/data krypton encrypt /data/secrets.txt --password hunter2
 ```
 
-Safe automatically.
+Decrypt:
 
-That’s how tools reach mass adoption.
+```bash
+docker run -v ${PWD}:/data krypton decrypt /data/secrets.txt.kry --password hunter2
+```
+
+Environment-variable password example:
+
+```bash
+docker run \
+  -e KRYP_PASS=hunter2 \
+  -v ${PWD}:/data \
+  krypton encrypt /data/secrets.txt --password-env KRYP_PASS
+```
+
+The container runs as a **non-root user** for improved runtime security.
 
 ---
 
-# Step 4 — become pipeline-native (this is huge)
+# Cryptographic Design
 
-Support:
+Krypton uses only modern, misuse-resistant primitives:
 
-```
-krypton encrypt secrets.env > secrets.kry
-```
+| Component      | Algorithm               |
+| -------------- | ----------------------- |
+| KDF            | Argon2id                |
+| Cipher         | XChaCha20               |
+| Authentication | Poly1305                |
+| Mode           | AEAD                    |
+| Envelope       | Versioned binary format |
 
-inside:
-
-- GitHub Actions
-- Docker builds
-- Terraform
-- Kubernetes secrets
-- CI/CD
-
-Example:
-
-```
-echo $SECRET | krypton encrypt > secret.kry
-```
-
-This creates ecosystem adoption.
-
-Stars follow ecosystem usage.
+No custom cryptography is implemented.
 
 ---
 
-# Step 5 — build trust (crypto tools live or die here)
+# Security Model
 
-You need:
+Krypton protects against:
 
-### SECURITY.md
+- offline brute-force attacks (via Argon2id)
+- ciphertext tampering
+- nonce reuse risks
+- unauthenticated decryption
+- partial file corruption during streaming
 
-Explain:
+Krypton does **not** protect against:
 
-- threat model
-- guarantees
-- non-goals
-- primitives used
-- why Argon2id
-- why XChaCha20
+- weak passwords
+- compromised host machines
+- memory disclosure attacks
+- side-channel attacks
 
-Crypto projects without this never scale.
-
----
-
-# Step 6 — publish reproducible binaries
-
-Release:
-
-```
-Linux
-Mac
-Windows
-ARM
-```
-
-Single static binary:
-
-```
-curl | install
-```
-
-Example:
-
-```
-curl https://krypton.sh/install | sh
-```
-
-Now adoption becomes frictionless.
+See `SECURITY.md` for details.
 
 ---
 
-# Step 7 — add language bindings
+# Encryption Envelope Overview
 
-Expose Krypton to:
+Each encrypted file contains:
 
 ```
-Python
-Node
-Go
+magic bytes
+version
+cipher identifier
+kdf identifier
+salt
+nonce(s)
+aad
+ciphertext
+authentication tag
 ```
 
-Now Krypton becomes infrastructure.
+Streaming mode stores authenticated chunk records sequentially.
 
-Stars explode when tools become dependencies.
+See `FORMAT.md` for full specification.
 
 ---
 
-# Step 8 — fuzz the parser (serious credibility jump)
-
-Add:
+# Architecture
 
 ```
-cargo fuzz
+password
+  ↓
+Argon2id
+  ↓
+derived key
+  ↓
+XChaCha20-Poly1305
+  ↓
+envelope serializer
+  ↓
+output file
 ```
 
-Targets:
+Module layout:
 
 ```
-envelope parser
-engine decrypt
+crypto/
+engine/
+envelope/
+stream/
+cli/
 ```
 
-Then document:
-
-```
-Parser fuzz-tested
-```
-
-Security engineers notice immediately.
+See `ARCHITECTURE.md` for details.
 
 ---
 
-# Step 9 — benchmark against competitors
+# CI Pipeline
 
-Example:
+GitHub Actions automatically verifies:
 
-```
-krypton vs gpg
-krypton vs openssl
-krypton vs age
-```
+- formatting (`cargo fmt`)
+- linting (`cargo clippy`)
+- unit tests
+- streaming encryption tests
+- Docker image build
 
-Publish results.
-
-Performance charts generate attention.
+Every push is validated automatically.
 
 ---
 
-# Step 10 — make Krypton composable
+# Roadmap
 
-Support:
+Planned improvements:
 
-```
-stdin
-stdout
-pipes
-streams
-env vars
-files
-keys
-passwords
-```
-
-Composable tools go viral.
-
-Interactive-only tools do not.
+- key-based encryption API
+- memory zeroization hardening
+- streaming performance benchmarks
+- fuzz testing for envelope parser
+- WASM support
+- optional REST microservice wrapper
 
 ---
 
-# What actually creates 100k stars (real formula)
+# License
 
-Successful OSS tools usually satisfy:
+This project is licensed under the MIT License.
 
-| factor                     | required  |
-| -------------------------- | --------- |
-| simple CLI                 | ✅        |
-| single binary              | needed    |
-| zero-config safety         | critical  |
-| pipeline integration       | critical  |
-| great README               | mandatory |
-| clear threat model         | mandatory |
-| fast                       | important |
-| cross-platform             | mandatory |
-| installable in one command | mandatory |
+See `LICENSE` for details.
 
 ---
 
-# What Krypton already has (rare for early-stage project)
+# Why Krypton Exists
 
-You already built:
+Krypton is designed as a **modern Rust cryptography systems project** demonstrating:
 
-✔ versioned envelope format
-✔ Argon2id KDF
-✔ XChaCha20 AEAD
-✔ tamper-safe parser
-✔ layered architecture
-✔ CLI entrypoint
+- secure envelope design
+- authenticated streaming encryption
+- containerized CLI tooling
+- reproducible builds via CI/CD
+- infrastructure-ready distribution workflows
 
-That’s the **hardest 40%**.
-
-Most projects never get this far.
+It intentionally avoids legacy primitives such as AES-CBC or PBKDF2.
 
 ---
 
-# Realistic strategy if your goal is massive impact
+# Disclaimer
 
-Follow this sequence:
-
-### Phase 1
-
-Finish production CLI (file + stdin + stdout)
-
-### Phase 2
-
-Add streaming encryption
-
-### Phase 3
-
-Add keypair support
-
-### Phase 4
-
-Add armored output
-
-### Phase 5
-
-Add install script + releases
-
-### Phase 6
-
-Add fuzzing + benchmarks
-
-### Phase 7
-
-Write elite README
-
-Then announce on:
-
-```
-r/rust
-r/programming
-Hacker News
-lobste.rs
-```
-
-That’s how tools take off 🚀
-
----
-
-If you want Krypton to compete with tools like **age**, I can help design the **next architectural upgrade: streaming encryption format v2** (the single biggest step toward serious adoption).
+Krypton is provided as a security engineering project and research-grade encryption tool. It has **not undergone formal third-party cryptographic audit**.
