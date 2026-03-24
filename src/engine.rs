@@ -42,21 +42,23 @@ pub fn encrypt(password: &[u8], plaintext: &[u8], aad: &[u8]) -> Result<Vec<u8>,
 
 pub fn decrypt(password: &[u8], envelope_bytes: &[u8]) -> Result<Vec<u8>, KryptonError> {
     // 1. Parse envelope
-    let env = crate::envelope::parse(envelope_bytes)?;
+    let env = crate::envelope::parse(envelope_bytes).map_err(|_| KryptonError::DecryptionFailed)?;
 
     // 2. Validate algorithms
     if env.cipher != CipherSuite::XChaCha20Poly1305 {
-        return Err(KryptonError::Unsupported);
+        return Err(KryptonError::DecryptionFailed);
     }
     if env.kdf != Kdf::Argon2id {
-        return Err(KryptonError::Unsupported);
+        return Err(KryptonError::DecryptionFailed);
     }
 
     // 3. Derive key
-    let mut key = kdf::derive_key(password, &env.salt)?;
+    let mut key =
+        kdf::derive_key(password, &env.salt).map_err(|_| KryptonError::DecryptionFailed)?;
 
     // 4. Decrypt
-    let decrypted = aead::decrypt(&key, &env.nonce, &env.aad, &env.ciphertext, &env.tag);
+    let decrypted = aead::decrypt(&key, &env.nonce, &env.aad, &env.ciphertext, &env.tag)
+        .map_err(|_| KryptonError::DecryptionFailed);
     key.zeroize();
     decrypted
 }

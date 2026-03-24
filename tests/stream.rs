@@ -49,7 +49,7 @@ fn stream_tampered_header_fails() {
     encrypted[0] ^= 0xFF;
 
     let err = decrypt_stream(Cursor::new(&encrypted), Vec::new(), password, aad).unwrap_err();
-    assert!(matches!(err, KryptonError::InvalidEnvelope));
+    assert!(matches!(err, KryptonError::DecryptionFailed));
 }
 
 #[test]
