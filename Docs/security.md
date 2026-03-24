@@ -110,9 +110,7 @@ Timing attacks, cache attacks, and power-analysis attacks are outside the scope 
 
 ### Memory Disclosure Attacks
 
-Memory scraping or swap leakage protection is not guaranteed in the current release.
-
-Future versions may include additional zeroization protections.
+Krypton reduces exposure from residual secret material by zeroizing sensitive buffers after use, but it does not claim full protection against a compromised host, live memory inspection, or swap capture.
 
 ---
 
@@ -186,6 +184,18 @@ Users should:
 - avoid storing passwords in plaintext scripts
 - use environment-variable secrets for automation
 - rotate encrypted files if compromise is suspected
+
+---
+
+# Memory Zeroization
+
+Sensitive buffers including:
+
+- password material
+- derived symmetric keys
+- streaming chunk buffers
+
+are cleared from memory using the `zeroize` crate after use to reduce exposure risk from memory disclosure attacks.
 
 ---
 

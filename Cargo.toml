@@ -13,4 +13,17 @@ chacha20poly1305 = { version = "0.10"}
 base64 = "0.22"
 
 [dev-dependencies]
+criterion = "0.5"
 tempfile = "3"
+
+[[bench]]
+name = "engine"
+harness = false
+
+[[bench]]
+name = "stream"
+harness = false
+
+[[bench]]
+name = "kdf"
+harness = false

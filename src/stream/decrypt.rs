@@ -1,4 +1,5 @@
 use std::io::{ErrorKind, Read, Write};
+use zeroize::Zeroize;
 
 use crate::{
     crypto::{aead, kdf},
@@ -43,26 +44,35 @@ pub fn decrypt_stream<R: Read, W: Write>(
     let mut salt = [0u8; 16];
     reader.read_exact(&mut salt)?;
 
-    let key = kdf::derive_key(password, &salt)?;
+    let mut key = kdf::derive_key(password, &salt)?;
+    salt.zeroize();
 
-    while let Some(nonce) = read_nonce(&mut reader)? {
-        let mut len_buf = [0u8; 4];
-        reader.read_exact(&mut len_buf)?;
-        let len = u32::from_le_bytes(len_buf) as usize;
+    let result = (|| -> Result<(), KryptonError> {
+        while let Some(mut nonce) = read_nonce(&mut reader)? {
+            let mut len_buf = [0u8; 4];
+            reader.read_exact(&mut len_buf)?;
+            let len = u32::from_le_bytes(len_buf) as usize;
 
-        let mut ciphertext = vec![0u8; len];
-        reader.read_exact(&mut ciphertext)?;
+            let mut ciphertext = vec![0u8; len];
+            reader.read_exact(&mut ciphertext)?;
 
-        let mut tag = [0u8; TAG_LEN];
-        reader.read_exact(&mut tag)?;
+            let mut tag = [0u8; TAG_LEN];
+            reader.read_exact(&mut tag)?;
 
-        let plaintext = aead::decrypt(&key, &nonce, aad, &ciphertext, &tag)?;
-        writer.write_all(&plaintext)?;
-    }
+            let mut plaintext = aead::decrypt(&key, &nonce, aad, &ciphertext, &tag)?;
+            writer.write_all(&plaintext)?;
 
-    writer.flush()?;
+            plaintext.zeroize();
+            tag.zeroize();
+            nonce.zeroize();
+        }
 
-    Ok(())
+        writer.flush()?;
+
+        Ok(())
+    })();
+    key.zeroize();
+    result
 }
 
 fn read_nonce<R: Read>(reader: &mut R) -> Result<Option<[u8; NONCE_LEN]>, KryptonError> {

@@ -1,4 +1,5 @@
 use rand_core::{OsRng, RngCore};
+use zeroize::Zeroize;
 
 use crate::{
     crypto::{aead, kdf},
@@ -12,14 +13,16 @@ pub fn encrypt(password: &[u8], plaintext: &[u8], aad: &[u8]) -> Result<Vec<u8>,
     OsRng.fill_bytes(&mut salt);
 
     // 2. Derive key
-    let key = kdf::derive_key(password, &salt)?;
+    let mut key = kdf::derive_key(password, &salt)?;
 
     // 3. Generate nonce (24 bytes for XChaCha)
     let mut nonce = vec![0u8; 24];
     OsRng.fill_bytes(&mut nonce);
 
     // 4. Encrypt
-    let (ciphertext, tag) = aead::encrypt(&key, &nonce, aad, plaintext)?;
+    let encrypted = aead::encrypt(&key, &nonce, aad, plaintext);
+    key.zeroize();
+    let (ciphertext, tag) = encrypted?;
 
     // 5. Build envelope
     let env = Envelope {
@@ -50,8 +53,10 @@ pub fn decrypt(password: &[u8], envelope_bytes: &[u8]) -> Result<Vec<u8>, Krypto
     }
 
     // 3. Derive key
-    let key = kdf::derive_key(password, &env.salt)?;
+    let mut key = kdf::derive_key(password, &env.salt)?;
 
     // 4. Decrypt
-    aead::decrypt(&key, &env.nonce, &env.aad, &env.ciphertext, &env.tag)
+    let decrypted = aead::decrypt(&key, &env.nonce, &env.aad, &env.ciphertext, &env.tag);
+    key.zeroize();
+    decrypted
 }

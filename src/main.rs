@@ -6,6 +6,7 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
+use zeroize::Zeroize;
 
 use krypton::stream::{decrypt::decrypt_stream, encrypt::encrypt_stream};
 
@@ -70,14 +71,17 @@ fn main() {
 }
 
 fn resolve_password(password: Option<String>, password_env: Option<String>) -> Vec<u8> {
-    if let Some(password) = password {
-        return password.into_bytes();
+    if let Some(mut password) = password {
+        let bytes = password.as_bytes().to_vec();
+        password.zeroize();
+        return bytes;
     }
 
     if let Some(env_var) = password_env {
-        return env::var(env_var)
-            .expect("environment variable not set")
-            .into_bytes();
+        let mut password = env::var(env_var).expect("environment variable not set");
+        let bytes = password.as_bytes().to_vec();
+        password.zeroize();
+        return bytes;
     }
 
     print!("Enter password: ");
@@ -88,7 +92,9 @@ fn resolve_password(password: Option<String>, password_env: Option<String>) -> V
         .read_line(&mut password)
         .expect("failed to read password");
 
-    password.trim().as_bytes().to_vec()
+    let bytes = password.trim_end_matches(['\r', '\n']).as_bytes().to_vec();
+    password.zeroize();
+    bytes
 }
 
 fn default_encrypt_output(input: &Path) -> PathBuf {
@@ -126,18 +132,19 @@ fn run_encrypt(
 ) {
     let input_file = File::open(&input).expect("failed to read input file");
 
-    let password = resolve_password(password, password_env);
+    let mut password = resolve_password(password, password_env);
 
     let output = output.unwrap_or_else(|| default_encrypt_output(&input));
     let output_file = File::create(&output).expect("failed to write output file");
 
-    encrypt_stream(
+    let result = encrypt_stream(
         BufReader::new(input_file),
         BufWriter::new(output_file),
         &password,
         b"krypton-cli:v1",
-    )
-    .expect("encryption failed");
+    );
+    password.zeroize();
+    result.expect("encryption failed");
 
     println!("Encrypted -> {}", output.display());
 }
@@ -150,18 +157,19 @@ fn run_decrypt(
 ) {
     let input_file = File::open(&input).expect("failed to read input file");
 
-    let password = resolve_password(password, password_env);
+    let mut password = resolve_password(password, password_env);
 
     let output = output.unwrap_or_else(|| default_decrypt_output(&input));
     let output_file = File::create(&output).expect("failed to write output file");
 
-    decrypt_stream(
+    let result = decrypt_stream(
         BufReader::new(input_file),
         BufWriter::new(output_file),
         &password,
         b"krypton-cli:v1",
-    )
-    .expect("decryption failed");
+    );
+    password.zeroize();
+    result.expect("decryption failed");
 
     println!("Decrypted -> {}", output.display());
 }
