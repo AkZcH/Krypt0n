@@ -10,7 +10,7 @@ use crate::{
 };
 
 const MAGIC: &[u8; 7] = b"KRYSTRM";
-const CHUNK_SIZE: usize = 64 * 1024;
+const CHUNK_SIZE: usize = 64 * 1024; //64 * 1KB = 64 KB
 
 pub fn encrypt_stream<R: Read, W: Write>(
     mut reader: R,

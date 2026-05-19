@@ -25,5 +25,9 @@ name = "stream"
 harness = false
 
 [[bench]]
+name = "memory_profile"
+harness = false
+
+[[bench]]
 name = "kdf"
 harness = false
